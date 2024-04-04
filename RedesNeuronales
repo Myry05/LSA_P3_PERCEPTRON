@@ -1,0 +1,134 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+public class PerceptronGUI extends JFrame {
+    private Perceptron perceptron;
+
+    public PerceptronGUI() {
+        setTitle("Perceptron");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(400, 400);
+
+        perceptron = new Perceptron(2); // Inicializa el perceptrón con 2 entradas
+
+        JPanel contentPane = new JPanel();
+        contentPane.setLayout(new BorderLayout());
+
+        DrawingPanel drawingPanel = new DrawingPanel();
+        contentPane.add(drawingPanel, BorderLayout.CENTER);
+
+        JButton trainButton = new JButton("Intentar");
+        trainButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                perceptron.train(drawingPanel.getPoints());
+                SwingUtilities.invokeLater(new Runnable() {
+                    public void run() {
+                        drawingPanel.repaint();
+                    }
+                 }); 
+            }
+        });
+        
+        contentPane.add(trainButton, BorderLayout.SOUTH);
+
+        setContentPane(contentPane);
+        setVisible(true);
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                new PerceptronGUI();
+            }
+        });
+    }
+
+    // Clase para dibujar puntos en el panel
+    private class DrawingPanel extends JPanel {
+        private Point[] points = new Point[100];
+        private int pointCount = 0;
+
+        public DrawingPanel() {
+            setBackground(Color.WHITE);
+            addMouseListener(new java.awt.event.MouseAdapter() {
+                public void mouseClicked(java.awt.event.MouseEvent evt) {
+                    if (pointCount < points.length) {
+                        points[pointCount++] = evt.getPoint();
+                        repaint();
+                    }
+                }
+            });
+        }
+
+        public Point[] getPoints() {
+            Point[] result = new Point[pointCount];
+            System.arraycopy(points, 0, result, 0, pointCount);
+            return result;
+        }
+
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            g.setColor(Color.BLUE);
+            for (int i = 0; i < pointCount; i++) {
+                g.fillOval(points[i].x - 3, points[i].y - 3, 6, 6);
+            }
+
+            // Dibuja la línea de decisión del perceptrón
+            g.setColor(Color.RED);
+            if (perceptron != null) {
+                double[] weights = perceptron.getWeights();
+                if (weights.length == 3) {
+                    int x1 = -1000;
+                    int y1 = (int) ((-weights[0] - weights[1] * x1) / weights[2]);
+                    int x2 = 1000;
+                    int y2 = (int) ((-weights[0] - weights[1] * x2) / weights[2]);
+                    g.drawLine(x1, y1, x2, y2);
+                }
+            }
+        }
+    }
+}
+
+class Perceptron {
+    private double[] weights;
+    private double learningRate = 0.01;
+
+    public Perceptron(int numInputs) {
+        weights = new double[numInputs + 1]; // Se incluye el sesgo
+        for (int i = 0; i < weights.length; i++) {
+            weights[i] = Math.random() * 2 - 1; // Inicialización aleatoria de pesos
+        }
+    }
+
+    public void train(Point[] points) {
+        for (Point p : points) {
+            double[] inputs = {p.x, p.y, 1}; // Se agrega 1 para el sesgo
+            double target = p.x > p.y ? 1 : -1; // Clasificación basada en la relación entre x e y
+            double guess = guess(inputs);
+            double error = target - guess;
+            for (int i = 0; i < weights.length; i++) {
+                weights[i] += error * inputs[i] * learningRate;
+            }
+        }
+    }
+
+    public double guess(double[] inputs) {
+        double sum = 0;
+        for (int i = 0; i < weights.length; i++) {
+            sum += inputs[i] * weights[i];
+        }
+        return activate(sum);
+    }
+
+    private double activate(double sum) {
+        return sum > 0 ? 1 : -1; // Función de activación escalón
+    }
+
+    public double[] getWeights() {
+        return weights;
+    }
+}
+
